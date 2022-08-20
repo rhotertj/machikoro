@@ -170,6 +170,9 @@ class MachiKoroEnv(gym.Env):
         self.state = state
         self.current_turn_state = ts.ROLL_DICE
         self.current_player = 0
+        self.second_turn = False
+        self.steal_card_target_action = None
+        
 
     
     def _step_roll(self, action):
@@ -586,4 +589,7 @@ class MachiKoroEnv(gym.Env):
         """Closes the environment. We do not open any files or save anything so this does nothing.
         """        
         pass
+
+    def reset(self):
+        self._init_state()
 

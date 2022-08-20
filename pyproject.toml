@@ -1,0 +1,15 @@
+[project]
+name = "machikoro-env"
+description = "A gym environment for the card game machikoro"
+version = "1"
+authors = [
+    { name = "Jim Rhotert", email = "machikoro@rhotertj.de" }
+]
+dependencies = [
+    "numpy",
+    "gym"
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
