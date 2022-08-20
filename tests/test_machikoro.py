@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 
-from machikoro import MachiKoro
+from machikoro import MachiKoroEnv
 import machikoro_actions as a
 import machikoro_state_space as sp
 import machikoro_turn_states as ts
@@ -10,7 +10,7 @@ import machikoro_turn_states as ts
 
 @pytest.fixture(scope="function")
 def env():
-    env= MachiKoro(4, test_mode=True)
+    env= MachiKoroEnv(4, test_mode=True)
     env._init_state()
     return env
 
