@@ -1,0 +1,8 @@
+name: machikoro
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - numpy
+  - pip:
+    - gym

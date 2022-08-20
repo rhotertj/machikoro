@@ -1,0 +1,96 @@
+
+"""
+This file represents all cards, their cost and when they are activated.
+"""
+
+import numpy as np
+
+
+# Monuments
+STATION = 0
+MALL = 1
+AMUSEMENT_PARK = 2
+RADIO_TOWER = 3
+# Companies
+WHEAT_FIELD = 4
+RANCH = 5
+BAKERY = 6
+CAFE = 7
+KOMBINI = 8
+FOREST = 9
+STADIUM = 10
+TV_STATION = 11
+BUSINESS_CENTER = 12
+CHEESE_FACTORY = 13
+FURNITURE_FACTORY = 14
+MINE = 15
+FAMILY_RESTAURANT = 16
+APPLE_ORCHARD = 17
+MARKET = 18
+
+prices = {
+    STATION : 4,
+    MALL : 10,
+    AMUSEMENT_PARK : 16,
+    RADIO_TOWER : 22,
+    # Companies
+    WHEAT_FIELD : 1,
+    RANCH : 1,
+    BAKERY : 1,
+    CAFE : 2,
+    KOMBINI : 2,
+    FOREST : 3,
+    STADIUM : 6,
+    TV_STATION : 7,
+    BUSINESS_CENTER : 8,
+    CHEESE_FACTORY : 5,
+    FURNITURE_FACTORY : 3,
+    MINE : 6,
+    FAMILY_RESTAURANT : 3,
+    APPLE_ORCHARD : 3,
+    MARKET : 2
+}
+
+cards_by_throw = [
+    [WHEAT_FIELD],
+    [RANCH, BAKERY], 
+    [BAKERY, CAFE], 
+    [KOMBINI], 
+    [FOREST], 
+    [STADIUM, TV_STATION, BUSINESS_CENTER], 
+    [CHEESE_FACTORY], 
+    [FURNITURE_FACTORY], 
+    [MINE, FAMILY_RESTAURANT], 
+    [APPLE_ORCHARD], 
+    [MARKET], 
+    [MARKET] 
+]
+
+INVENTORY = np.zeros(19)
+# monuments
+INVENTORY[STATION] = 4
+INVENTORY[MALL] = 4
+INVENTORY[AMUSEMENT_PARK] = 4
+INVENTORY[RADIO_TOWER] = 4
+# companies
+INVENTORY[WHEAT_FIELD] = 5
+INVENTORY[RANCH] = 6
+INVENTORY[BAKERY] = 6
+INVENTORY[CAFE] = 6
+INVENTORY[KOMBINI] = 6 
+INVENTORY[FOREST] = 6
+INVENTORY[STADIUM] = 4
+INVENTORY[TV_STATION] = 4
+INVENTORY[BUSINESS_CENTER] = 4
+INVENTORY[CHEESE_FACTORY] = 6
+INVENTORY[FURNITURE_FACTORY] = 6
+INVENTORY[MINE] = 6
+INVENTORY[FAMILY_RESTAURANT] = 6
+INVENTORY[APPLE_ORCHARD] = 6
+INVENTORY[MARKET] =  6
+
+def get_price(card):
+    return prices[card]
+
+def get_cards_by_throw(throw):
+    return cards_by_throw[throw - 1]
