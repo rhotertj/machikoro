@@ -43,15 +43,13 @@ class MachiKoroEnv(gym.Env):
             test_mode (bool, optional): Whether you want to set the dice manually. Defaults to False.
         """        
         super().__init__()
+        self.n_players = n_players
+        self.reset()
+
+        self.action_space = gym.spaces.Discrete(a.CHOOSE_PLAYER_3 + 1)
+        self.observation_space = gym.spaces.Box(low=0, high=100, shape=self.state.shape)
 
         self.test_mode = test_mode
-
-        self.n_players = n_players
-        self._init_state()
-        self.action_space = gym.spaces.Discrete(a.CHOOSE_PLAYER_3 + 1)
-        self.inventory = INVENTORY.copy()
-
-        self.second_turn = False
     
     ###############
     # PROPERTY GETTERS / SETTERS
@@ -117,7 +115,7 @@ class MachiKoroEnv(gym.Env):
         Returns:
             tuple: (current state, reward (minus three), end turn (false), end game (false))
         """        
-        return self.state, -3, False, False
+        return self.state, -3, {"end_turn" : False}, False
 
     def _owns(self, card):
         """Whether the current player already owns the card
@@ -161,6 +159,7 @@ class MachiKoroEnv(gym.Env):
             15 Companies
             2 Dice
         """
+        self.inventory = INVENTORY.copy()
         state = np.zeros((self.n_players, sp.DIE2 + 1))
         # starting coins
         state[:, sp.COINS] = 3
@@ -439,6 +438,7 @@ class MachiKoroEnv(gym.Env):
     def step(self, action, dice=None):
         """Performs one step in the game.
         Note that in MachiKoro, one turn consists of many steps.
+        The return info dict contains the "end_turn" information.
 
         Args:
             action (int): An action to play. Should fit the current turn state.
@@ -446,7 +446,7 @@ class MachiKoroEnv(gym.Env):
                 when initializing the environment and set dice throws manually here. Defaults to None.
 
         Returns:
-            tuple[np.ndarray, int, bool, bool]: state, reward, end of turn, end of game
+            tuple[np.ndarray, int, dict, bool]: state, reward, info, end of game
         """        
         
         # result = (state, reward, end turn, end game)
@@ -479,7 +479,7 @@ class MachiKoroEnv(gym.Env):
                 self.current_turn_state = ts.MAY_BUY
                 self._economy()
 
-            return self.state, self._reward, False, False
+            return self.state, self._reward(), {"end_turn" : False}, False
 
         elif cts == ts.MAY_REROLL:
 
@@ -497,7 +497,7 @@ class MachiKoroEnv(gym.Env):
             self._economy()
                 
 
-            return self.state, self._reward(), False, False
+            return self.state, self._reward(), {"end_turn" : False}, False
 
         if cts == ts.MAY_CHOOSE_PLAYER_FOR_COINS:
             # only allow stealing from other players
@@ -513,7 +513,7 @@ class MachiKoroEnv(gym.Env):
             self.current_turn_state = ts.MAY_BUY
             self._economy()
             
-            return self.state, self._reward(), False, False
+            return self.state, self._reward(), {"end_turn" : False}, False
 
         if cts == ts.MAY_CHOOSE_PLAYER_FOR_CARD:
             # only allow stealing from other players
@@ -526,7 +526,7 @@ class MachiKoroEnv(gym.Env):
 
             self.steal_card_target_action = action 
             self.current_turn_state = ts.MAY_CHOOSE_CARD
-            return self.state, self._reward(), False, False
+            return self.state, self._reward(), {"end_turn" : False}, False
 
         if cts == ts.MAY_CHOOSE_CARD:
 
@@ -540,7 +540,7 @@ class MachiKoroEnv(gym.Env):
             # this should not do anything as the business center is the only card activated by throw=6,
             # but who knows what kind of add-ons will come :)
             self._economy()
-            return self.state, self._reward(), False, False
+            return self.state, self._reward(), {"end_turn" : False}, False
 
         if cts == ts.MAY_BUY:
 
@@ -554,7 +554,7 @@ class MachiKoroEnv(gym.Env):
 
             # end game, player has all monuments, excluding index
             if sum(self.state[self.current_player, sp.STATION:sp.RADIO_TOWER + 1]) == 4:
-                return self.state, 1000, False, True
+                return self.state, 1000, {"end_turn" : False}, True
 
             d1, d2 = self.current_throw
             if (d1 == d2 and HAS_SECOND_TURN) and not self.second_turn:
@@ -563,7 +563,7 @@ class MachiKoroEnv(gym.Env):
                 self.current_throw = (0,0)
                 self.second_turn = True
                 self.steal_card_target_action = None   
-                return self.state, self._reward(), False, False
+                return self.state, self._reward(), {"end_turn" : False}, False
             else:
                 # end turn
                 self.current_player  = (self.current_player + 1) % self.n_players
@@ -571,7 +571,7 @@ class MachiKoroEnv(gym.Env):
                 self.current_throw = (0,0)
                 self.second_turn = False 
                 self.steal_card_target_action = None               
-                return self.state, self._reward(), True, False
+                return self.state, self._reward(), {"end_turn" : True}, False
                 
         return result
 
