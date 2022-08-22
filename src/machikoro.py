@@ -7,7 +7,6 @@ import machikoro_actions as a
 import machikoro_state_space as sp
 import machikoro_turn_states as ts
 
-
 def a2c(action):
     """Turns an action into a card
 
@@ -47,10 +46,14 @@ class MachiKoroEnv(gym.Env):
         self.reset()
 
         self.action_space = gym.spaces.Discrete(a.CHOOSE_PLAYER_3 + 1)
-        self.observation_space = gym.spaces.Box(low=0, high=100, shape=self.state.shape)
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=self.state.shape, dtype=self.state.dtype)
 
         self.test_mode = test_mode
-    
+
+    def reset(self):
+        self._init_state()
+        return self.state
+
     ###############
     # PROPERTY GETTERS / SETTERS
     ###############
@@ -447,10 +450,25 @@ class MachiKoroEnv(gym.Env):
 
         Returns:
             tuple[np.ndarray, int, dict, bool]: state, reward, info, end of game
+        """
+        obs, reward, info, done = self._step(action, dice)
+        if not self.test_mode:
+            return obs.flatten(), reward, info, done
+        return obs, reward, info, done
+
+    def _step(self, action, dice=None):
+        """Actual step function of the env.
+
+        Args:
+            action (int): An action to play. Should fit the current turn state.
+            dice (_type_, optional): If you want to test the code, you may want to activate test mode
+                when initializing the environment and set dice throws manually here. Defaults to None.
+
+        Returns:
+            tuple[np.ndarray, int, dict, bool]: state, reward, info, end of game
         """        
         
         # result = (state, reward, end turn, end game)
-        result = None
         cts = self.current_turn_state
 
         # check monument ownership before turn
@@ -573,7 +591,7 @@ class MachiKoroEnv(gym.Env):
                 self.steal_card_target_action = None               
                 return self.state, self._reward(), {"end_turn" : True}, False
                 
-        return result
+        return self.state, 0, {"end_turn" : True}, False
 
     def render(self):
         """Prints out some information about the current state.
@@ -590,6 +608,4 @@ class MachiKoroEnv(gym.Env):
         """        
         pass
 
-    def reset(self):
-        self._init_state()
 
