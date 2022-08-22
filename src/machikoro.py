@@ -42,16 +42,20 @@ class MachiKoroEnv(gym.Env):
             test_mode (bool, optional): Whether you want to set the dice manually. Defaults to False.
         """        
         super().__init__()
+        self.test_mode = test_mode
         self.n_players = n_players
         self.reset()
 
         self.action_space = gym.spaces.Discrete(a.CHOOSE_PLAYER_3 + 1)
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=self.state.shape, dtype=self.state.dtype)
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=((sp.DIE2 + 1) * self.n_players,), dtype=self.state.dtype)
 
-        self.test_mode = test_mode
+        
 
     def reset(self):
         self._init_state()
+        if not self.test_mode:
+            return self.state.flatten()
+
         return self.state
 
     ###############
@@ -453,8 +457,8 @@ class MachiKoroEnv(gym.Env):
         """
         obs, reward, info, done = self._step(action, dice)
         if not self.test_mode:
-            return obs.flatten(), reward, info, done
-        return obs, reward, info, done
+            return obs.flatten(), reward, done, info
+        return obs, reward, done, info
 
     def _step(self, action, dice=None):
         """Actual step function of the env.
