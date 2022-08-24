@@ -444,6 +444,8 @@ class MachiKoroEnv(gym.Env):
                     self.cards_activated.remove(c.MARKET)
 
     def _end_turn(self):
+        """Ends the turn for the current player and makes necessary changes to the class variables.
+        """        
         self.current_turn_state = 0
         self.current_throw = (0,0)
         self.current_player  = (self.current_player + 1) % self.n_players
@@ -456,6 +458,7 @@ class MachiKoroEnv(gym.Env):
         """Performs one step in the game.
         Note that in MachiKoro, one turn consists of many steps.
         The return info dict contains the "end_turn" information.
+        All other players will be simulated by given agents.
 
         Args:
             action (int): An action to play. Should fit the current turn state.
@@ -463,7 +466,7 @@ class MachiKoroEnv(gym.Env):
                 when initializing the environment and set dice throws manually here. Defaults to None.
 
         Returns:
-            tuple[np.ndarray, int, dict, bool]: state, reward, info, end of game
+            tuple[np.ndarray, int, bool, dict]: state, reward, done, info
         """
         this_player = self.current_player
         obs, reward, done, info = self._step(action, dice)
