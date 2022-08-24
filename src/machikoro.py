@@ -6,6 +6,7 @@ import machikoro_cards as c
 import machikoro_actions as a
 import machikoro_state_space as sp
 import machikoro_turn_states as ts
+from machikoro_agent import RandomPolicyAgent
 
 def a2c(action):
     """Turns an action into a card
@@ -44,12 +45,13 @@ class MachiKoroEnv(gym.Env):
         super().__init__()
         self.test_mode = test_mode
         self.n_players = n_players
+        self.current_player = 0
         self.reset()
 
         self.action_space = gym.spaces.Discrete(a.CHOOSE_PLAYER_3 + 1)
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=((sp.DIE2 + 1) * self.n_players,), dtype=self.state.dtype)
 
-        
+        self.agents = [None, RandomPolicyAgent(), RandomPolicyAgent(), RandomPolicyAgent()]
 
     def reset(self):
         self._init_state()
@@ -64,11 +66,11 @@ class MachiKoroEnv(gym.Env):
 
     @property
     def current_turn_state(self):
-        return self.state[0, sp.TURN]
+        return self.state[self.current_player, sp.TURN]
     
     @current_turn_state.setter
     def current_turn_state(self, new):
-        self.state[0,0] = new
+        self.state[self.current_player, 0] = new
 
     @property
     def current_throw(self):
@@ -120,9 +122,9 @@ class MachiKoroEnv(gym.Env):
         """Crafts a return tuple for an illegally played action.
 
         Returns:
-            tuple: (current state, reward (minus three), end turn (false), end game (false))
+            tuple: (current state, reward (minus three), end game (false), {end_turn : false}))
         """        
-        return self.state, -3, {"end_turn" : False}, False
+        return self.state, -3, False, {"end_turn" : False}
 
     def _owns(self, card):
         """Whether the current player already owns the card
@@ -441,6 +443,14 @@ class MachiKoroEnv(gym.Env):
                     self._pay_self_multiplied_per_index([sp.WHEAT_FIELD, sp.APPLE_ORCHARD], sp.MARKET, 2)
                     self.cards_activated.remove(c.MARKET)
 
+    def _end_turn(self):
+        self.current_turn_state = 0
+        self.current_throw = (0,0)
+        self.current_player  = (self.current_player + 1) % self.n_players
+        self.current_turn_state = ts.ROLL_DICE
+        self.second_turn = False 
+        self.steal_card_target_action = None  
+
 
     def step(self, action, dice=None):
         """Performs one step in the game.
@@ -455,10 +465,25 @@ class MachiKoroEnv(gym.Env):
         Returns:
             tuple[np.ndarray, int, dict, bool]: state, reward, info, end of game
         """
-        obs, reward, info, done = self._step(action, dice)
-        if not self.test_mode:
-            return obs.flatten(), reward, done, info
-        return obs, reward, done, info
+        this_player = self.current_player
+        obs, reward, done, info = self._step(action, dice)
+
+        if self.test_mode:
+            return obs, reward, done, info
+        
+        if info["end_turn"]:
+            while not self.current_player == this_player:
+                # overwrite observation from after everyone else, recompute reward
+                obs, _, done, info = self._simulate_turn()
+                reward = self._reward()
+                if done:
+                    self._end_turn()
+                    self.current_turn_state = 0
+                    self.current_player = this_player
+                    self.current_turn_state = ts.ROLL_DICE
+                    reward = self._reward()
+        
+        return obs.flatten(), reward, done, info
 
     def _step(self, action, dice=None):
         """Actual step function of the env.
@@ -501,7 +526,7 @@ class MachiKoroEnv(gym.Env):
                 self.current_turn_state = ts.MAY_BUY
                 self._economy()
 
-            return self.state, self._reward(), {"end_turn" : False}, False
+            return self.state, self._reward(), False, {"end_turn" : False}
 
         elif cts == ts.MAY_REROLL:
 
@@ -519,7 +544,7 @@ class MachiKoroEnv(gym.Env):
             self._economy()
                 
 
-            return self.state, self._reward(), {"end_turn" : False}, False
+            return self.state, self._reward(), False, {"end_turn" : False}
 
         if cts == ts.MAY_CHOOSE_PLAYER_FOR_COINS:
             # only allow stealing from other players
@@ -535,7 +560,7 @@ class MachiKoroEnv(gym.Env):
             self.current_turn_state = ts.MAY_BUY
             self._economy()
             
-            return self.state, self._reward(), {"end_turn" : False}, False
+            return self.state, self._reward(), False, {"end_turn" : False}
 
         if cts == ts.MAY_CHOOSE_PLAYER_FOR_CARD:
             # only allow stealing from other players
@@ -548,7 +573,7 @@ class MachiKoroEnv(gym.Env):
 
             self.steal_card_target_action = action 
             self.current_turn_state = ts.MAY_CHOOSE_CARD
-            return self.state, self._reward(), {"end_turn" : False}, False
+            return self.state, self._reward(), False,{"end_turn" : False}
 
         if cts == ts.MAY_CHOOSE_CARD:
 
@@ -562,7 +587,7 @@ class MachiKoroEnv(gym.Env):
             # this should not do anything as the business center is the only card activated by throw=6,
             # but who knows what kind of add-ons will come :)
             self._economy()
-            return self.state, self._reward(), {"end_turn" : False}, False
+            return self.state, self._reward(), False, {"end_turn" : False}
 
         if cts == ts.MAY_BUY:
 
@@ -576,7 +601,7 @@ class MachiKoroEnv(gym.Env):
 
             # end game, player has all monuments, excluding index
             if sum(self.state[self.current_player, sp.STATION:sp.RADIO_TOWER + 1]) == 4:
-                return self.state, 1000, {"end_turn" : False}, True
+                return self.state, 1000, True, {"end_turn" : False}
 
             d1, d2 = self.current_throw
             if (d1 == d2 and HAS_SECOND_TURN) and not self.second_turn:
@@ -585,17 +610,14 @@ class MachiKoroEnv(gym.Env):
                 self.current_throw = (0,0)
                 self.second_turn = True
                 self.steal_card_target_action = None   
-                return self.state, self._reward(), {"end_turn" : False}, False
+                return self.state, self._reward(), False, {"end_turn" : False}
             else:
                 # end turn
-                self.current_player  = (self.current_player + 1) % self.n_players
-                self.current_turn_state = ts.ROLL_DICE
-                self.current_throw = (0,0)
-                self.second_turn = False 
-                self.steal_card_target_action = None               
-                return self.state, self._reward(), {"end_turn" : True}, False
+                self._end_turn()
+         
+                return self.state, self._reward(), False, {"end_turn" : True}
                 
-        return self.state, 0, {"end_turn" : True}, False
+        return self.state, 0, False, {"end_turn" : True}
 
     def render(self):
         """Prints out some information about the current state.
@@ -606,6 +628,22 @@ class MachiKoroEnv(gym.Env):
         print("Current reward:", self._reward())
         print(self.state)
         print("-"*5, "End Render")
+
+    def _simulate_turn(self):
+        """ Simulates one turn for the current player.
+        
+        Stable baselines does not implement multi agent approaches.
+        We fix this by simulating all other players with a fixed policy.
+        """
+        simulating_player = self.current_player
+        current_agent = self.agents[simulating_player]
+        while simulating_player == self.current_player:
+            action = current_agent.predict(self.state.flatten())
+            obs, reward, done, info = self._step(action)
+            if done:
+                return obs, reward, done, info
+
+        return obs, reward, done, info
 
     def close(self):
         """Closes the environment. We do not open any files or save anything so this does nothing.

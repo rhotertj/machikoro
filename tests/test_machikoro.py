@@ -39,8 +39,8 @@ def test_win_game(env):
     env.state[0, sp.MALL:sp.RADIO_TOWER + 1] = 1
     env.step(a.ROLL_1, (1,0))
     env.step(a.PASS) # skip reroll
-    state, _, end_turn, end_game = env.step(a.STATION)
-    assert end_game == True, state
+    state, _, done, info = env.step(a.STATION)
+    assert done == True, state
     
 
 def test_buy_monument_twice(env):
@@ -59,6 +59,7 @@ def test_buy_card(env):
     
     env.step(a.ROLL_1, (6,0))
     state2, *_ = env.step(a.RANCH)
+    print(state1, env.test_mode)
     assert state1[0, sp.RANCH] == 1
     assert state1[0, sp.COINS] == 2
 
