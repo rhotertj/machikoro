@@ -35,23 +35,30 @@ def a2sp(action):
 class MachiKoroEnv(gym.Env):
 
 
-    def __init__(self, n_players=4, test_mode=False) -> None:
+    def __init__(self, n_players=4, player_index=0, test_mode=False) -> None:
         """A gym environment of the game 'MachiKoro'.
 
         Args:
             n_players (int, optional): Number of players (2-4). Defaults to 4.
+            player_index (int, optional): At what position the training agent is found. Defaults to 0.
             test_mode (bool, optional): Whether you want to set the dice manually. Defaults to False.
         """        
         super().__init__()
         self.test_mode = test_mode
         self.n_players = n_players
-        self.current_player = 0
+        self.player_index = player_index
         self.reset()
 
         self.action_space = gym.spaces.Discrete(a.CHOOSE_PLAYER_3 + 1)
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=((sp.DIE2 + 1) * self.n_players,), dtype=self.state.dtype)
+        self.observation_space = gym.spaces.Box(
+                low=0,
+                high=255, 
+                shape=((sp.DIE2 + 1) * self.n_players,),
+                dtype=self.state.dtype
+            )
 
-        self.agents = [None, RandomPolicyAgent(), RandomPolicyAgent(), RandomPolicyAgent()]
+        self.agents = [RandomPolicyAgent()] * self.n_players
+        self.agents[player_index] = None
 
     def reset(self):
         self._init_state()
@@ -146,11 +153,14 @@ class MachiKoroEnv(gym.Env):
         Returns:
             int: The reward.
         """
-        coins = self.state[self.current_player, 1]
-        bought = 0
-        for card, n in enumerate(self.state[self.current_player, sp.STATION:sp.MARKET + 1]):
-            bought += n * c.get_price(card)
-        return coins + bought
+        rewards = []
+        for player in range(self.n_players):
+            coins = self.state[player, 1]
+            bought = 0
+            for n, card in enumerate(self.state[player, sp.STATION:sp.MARKET + 1]):
+                bought += n * c.get_price(card)
+            rewards.append(coins + bought)
+        return rewards[self.player_index] - max(rewards)
 
     #
     # HELPERS THAT RUN PARTS OF STEP OR BUY 
@@ -176,8 +186,9 @@ class MachiKoroEnv(gym.Env):
         state[:, sp.WHEAT_FIELD] = 1 
         state[:, sp.BAKERY] = 1 # BAKERY
         self.state = state
-        self.current_turn_state = ts.ROLL_DICE
         self.current_player = 0
+
+        self.current_turn_state = ts.ROLL_DICE
         self.second_turn = False
         self.steal_card_target_action = None
         
@@ -468,23 +479,25 @@ class MachiKoroEnv(gym.Env):
         Returns:
             tuple[np.ndarray, int, bool, dict]: state, reward, done, info
         """
-        this_player = self.current_player
+        while self.current_player != self.player_index and not self.test_mode:
+            self._simulate_turn()
+
         obs, reward, done, info = self._step(action, dice)
 
         if self.test_mode:
             return obs, reward, done, info
         
-        if info["end_turn"]:
-            while not self.current_player == this_player:
-                # overwrite observation from after everyone else, recompute reward
-                obs, _, done, info = self._simulate_turn()
+
+        while not self.current_player == self.player_index:
+            # overwrite observation from after everyone else, recompute reward
+            obs, _, done, info = self._simulate_turn()
+            reward = self._reward()
+            if done:
+                self._end_turn()
+                self.current_turn_state = 0
+                self.current_player = self.player_index
+                self.current_turn_state = ts.ROLL_DICE
                 reward = self._reward()
-                if done:
-                    self._end_turn()
-                    self.current_turn_state = 0
-                    self.current_player = this_player
-                    self.current_turn_state = ts.ROLL_DICE
-                    reward = self._reward()
         
         return obs.flatten(), reward, done, info
 
