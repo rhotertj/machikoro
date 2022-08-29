@@ -8,29 +8,6 @@ import machikoro_state_space as sp
 import machikoro_turn_states as ts
 from machikoro_agent import RandomPolicyAgent
 
-def a2c(action):
-    """Turns an action into a card
-
-    Args:
-        action (int): The action space representation of a card.
-
-    Returns:
-        int: The nth card.
-    """    
-    
-    return action - 3
-
-def a2sp(action):
-    """Turns an action into a state index
-
-    Args:
-        action (int): The action space representation of a card.
-
-    Returns:
-        int: The state space representation of a card.
-    """    
-    
-    return action - 1
 
 class MachiKoroEnv(gym.Env):
 
@@ -155,7 +132,7 @@ class MachiKoroEnv(gym.Env):
         """
         rewards = []
         for player in range(self.n_players):
-            coins = self.state[player, 1]
+            coins = self.state[player, sp.COINS]
             bought = 0
             for n, card in enumerate(self.state[player, sp.STATION:sp.MARKET + 1]):
                 bought += n * c.get_price(card)
@@ -226,11 +203,11 @@ class MachiKoroEnv(gym.Env):
             return True
 
         # no such card left
-        if self.inventory[a2c(action)] == 0:
+        if self.inventory[a.to_card(action)] == 0:
             return False
 
         # insufficient funds
-        price = c.get_price(a2c(action))
+        price = c.get_price(a.to_card(action))
         if self.funds < price:
             return False
         
@@ -243,11 +220,11 @@ class MachiKoroEnv(gym.Env):
             a.STADIUM,
             a.TV_STATION,
             a.BUSINESS_CENTER
-            ] and self._owns(a2sp(action)):
+            ] and self._owns(a.to_state_index(action)):
             return False
 
-        self.inventory[a2c(action)] -= 1
-        self.state[self.current_player, a2sp(action)] += 1
+        self.inventory[a.to_card(action)] -= 1
+        self.state[self.current_player, a.to_state_index(action)] += 1
         self.funds -= price
 
         return True
@@ -363,7 +340,7 @@ class MachiKoroEnv(gym.Env):
             case a.CHOOSE_PLAYER_3:
                 other_player = 3
 
-        card = a2sp(action)
+        card = a.to_state_index(action)
 
         # may only be owned once
         if sp.BUSINESS_CENTER >= card and card >= sp.STADIUM:

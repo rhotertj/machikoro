@@ -30,3 +30,27 @@ CHOOSE_PLAYER_0 = 23
 CHOOSE_PLAYER_1 = 24
 CHOOSE_PLAYER_2 = 25
 CHOOSE_PLAYER_3 = 26
+
+def to_card(action):
+    """Turns an action into a card
+
+    Args:
+        action (int): The action space representation of a card.
+
+    Returns:
+        int: The nth card.
+    """    
+    
+    return action - 3
+
+def to_state_index(action):
+    """Turns an action into a state index
+
+    Args:
+        action (int): The action space representation of a card.
+
+    Returns:
+        int: The state space representation of a card.
+    """    
+    
+    return action - 1
