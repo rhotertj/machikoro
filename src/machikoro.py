@@ -64,7 +64,7 @@ class MachiKoroEnv(gym.Env):
         self.current_player = 0
 
         self.current_turn_state = ts.ROLL_DICE
-        self.steal_card_target_action = None
+        self.selected_player = 0
 
         if self.test_mode:
             return self.state
@@ -152,6 +152,15 @@ class MachiKoroEnv(gym.Env):
     @second_turn.setter
     def second_turn(self, new):
         self.state[self.current_player, sp.SECOND_TURN] = new
+
+    @property
+    def selected_player(self):
+        return self.state[self.current_player, sp.PLAYER_SELECTED]
+
+    @selected_player.setter
+    def selected_player(self, new):
+        self.state[self.current_player, sp.PLAYER_SELECTED] = new
+
 
     @property
     def ILLEGAL_MOVE(self):
@@ -354,7 +363,7 @@ class MachiKoroEnv(gym.Env):
             bool: Whether the action was valid or not.
         """        
         other_player = self.current_player
-        match self.steal_card_target_action:
+        match self.selected_player:
             case a.CHOOSE_PLAYER_0:
                 other_player = 0
             case a.CHOOSE_PLAYER_1:
@@ -463,7 +472,7 @@ class MachiKoroEnv(gym.Env):
         self.current_player  = (self.current_player + 1) % self.n_players
         self.current_turn_state = ts.ROLL_DICE
         self.second_turn = 0 
-        self.steal_card_target_action = None  
+        self.selected_player = 0  
 
 
     def step(self, action, dice=None):
@@ -588,7 +597,7 @@ class MachiKoroEnv(gym.Env):
             if action not in valid_players:
                 return self.ILLEGAL_MOVE
 
-            self.steal_card_target_action = action 
+            self.selected_player = action 
             self.current_turn_state = ts.MAY_CHOOSE_CARD
             return self.state, self._reward(), False,{"end_turn" : False}
 
@@ -626,7 +635,7 @@ class MachiKoroEnv(gym.Env):
                 self.current_turn_state = ts.ROLL_DICE
                 self.current_throw = (0,0)
                 self.second_turn = 1
-                self.steal_card_target_action = None   
+                self.selected_player = 0   
                 return self.state, self._reward(), False, {"end_turn" : False}
             else:
                 # end turn
