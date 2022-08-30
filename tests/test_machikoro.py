@@ -11,7 +11,7 @@ import machikoro_turn_states as ts
 @pytest.fixture(scope="function")
 def env():
     env= MachiKoroEnv(4, test_mode=True)
-    env._init_state()
+    env.reset()
     return env
 
 def test_roll1(env):
@@ -107,9 +107,8 @@ def test_second_turn(env):
     env.state[0:2, sp.AMUSEMENT_PARK] = 1
     env.step(a.ROLL_2, (5,5))
     assert env.current_turn_state == ts.MAY_BUY
-    print(env.inventory)
     env.step(a.WHEAT_FIELD)
-
+    env.render()
     assert env.current_player == 0
     # check rolling with 1 dice allowed
     env.step(a.ROLL_1)
@@ -197,3 +196,20 @@ def test_earn_money_from_players(env):
     env.state[0, sp.STADIUM] = 1
     env.step(a.ROLL_1, (6,0))
     env.funds == 3 + (env.n_players - 1) * 2
+
+def test_simulate_step(env):
+    # call simulate step directly
+
+    pass
+
+def test_step():
+    # create env without test mode
+    # test step with simulations
+    env = MachiKoroEnv(4)
+    pass
+
+def test_player_not_first():
+    env = MachiKoroEnv(n_players=4, player_index=3)
+
+    env.step(a.ROLL_1) 
+    assert env.current_player == 3

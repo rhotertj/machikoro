@@ -38,26 +38,70 @@ class MachiKoroEnv(gym.Env):
         self.agents[player_index] = None
 
     def reset(self):
-        self._init_state()
-        if not self.test_mode:
-            return self.state.flatten()
+        """Initialize or reset the current state.
 
-        return self.state
+        Each player starts with 3 coins, a wheat field and a bakery.
+        The state is represented by an array of dim (num players)x(23 variables).
+        23 state variables divide into the following:
+            1 "Turn state" - ROLL, REROLL or BUY
+            1 Coins - Current funds
+            1 2nd turn - Whether this is your second turn
+            4 Monuments
+            15 Companies
+            2 Dice
 
+        Returns:
+            np.ndarray: The reset state.
+        """        
+        self.inventory = INVENTORY.copy()
+        state = np.zeros((self.n_players, sp.DIE2 + 1))
+        # starting coins
+        state[:, sp.COINS] = 3
+        # starting cards, offset monuments
+        state[:, sp.WHEAT_FIELD] = 1 
+        state[:, sp.BAKERY] = 1 # BAKERY
+        self.state = state
+        self.current_player = 0
+
+        self.current_turn_state = ts.ROLL_DICE
+        self.steal_card_target_action = None
+
+        if self.test_mode:
+            return self.state
+        return self.state.flatten()
+
+
+
+        
     ###############
     # PROPERTY GETTERS / SETTERS
     ###############
 
     @property
     def current_turn_state(self):
+        """Get the current turn state.
+
+        Returns:
+            int: Turn state
+        """        
         return self.state[self.current_player, sp.TURN]
     
     @current_turn_state.setter
     def current_turn_state(self, new):
+        """Set the new turn state.
+
+        Args:
+            new (int): New turn state.
+        """        
         self.state[self.current_player, 0] = new
 
     @property
     def current_throw(self):
+        """Get both dice of the current throw.
+
+        Returns:
+            Tuple[2]: Both dice values.
+        """        
         return self.state[self.current_player, -2:]
 
     @current_throw.setter
@@ -102,6 +146,14 @@ class MachiKoroEnv(gym.Env):
             self.state[self.current_player, sp.COINS] = new
 
     @property
+    def second_turn(self):
+        return self.state[self.current_player, sp.SECOND_TURN]
+
+    @second_turn.setter
+    def second_turn(self, new):
+        self.state[self.current_player, sp.SECOND_TURN] = new
+
+    @property
     def ILLEGAL_MOVE(self):
         """Crafts a return tuple for an illegally played action.
 
@@ -142,34 +194,6 @@ class MachiKoroEnv(gym.Env):
     #
     # HELPERS THAT RUN PARTS OF STEP OR BUY 
     #
-
-    def _init_state(self,):
-        """ Initialize game state.
-
-        Each player starts with 3 coins, a wheat field and a bakery.
-        The state is represented by an array of dim (num players)x(23 variables).
-        23 state variables divide into the following:
-            1 "Turn state" - ROLL, REROLL or BUY
-            1 Coins - Current funds
-            4 Monuments
-            15 Companies
-            2 Dice
-        """
-        self.inventory = INVENTORY.copy()
-        state = np.zeros((self.n_players, sp.DIE2 + 1))
-        # starting coins
-        state[:, sp.COINS] = 3
-        # starting cards, offset monuments
-        state[:, sp.WHEAT_FIELD] = 1 
-        state[:, sp.BAKERY] = 1 # BAKERY
-        self.state = state
-        self.current_player = 0
-
-        self.current_turn_state = ts.ROLL_DICE
-        self.second_turn = False
-        self.steal_card_target_action = None
-        
-
     
     def _step_roll(self, action):
         """Performs dice rolling based on given action
@@ -438,7 +462,7 @@ class MachiKoroEnv(gym.Env):
         self.current_throw = (0,0)
         self.current_player  = (self.current_player + 1) % self.n_players
         self.current_turn_state = ts.ROLL_DICE
-        self.second_turn = False 
+        self.second_turn = 0 
         self.steal_card_target_action = None  
 
 
@@ -495,9 +519,9 @@ class MachiKoroEnv(gym.Env):
 
         # check monument ownership before turn
         HAS_REROLL = self._owns(sp.RADIO_TOWER)
-        HAS_SECOND_TURN = self._owns(sp.AMUSEMENT_PARK)
+        HAS_SECOND_TURN = self._owns(sp.AMUSEMENT_PARK) and not self.second_turn == 1
         HAS_2_DICE = self._owns(sp.STATION)
-
+        print("second turn: ",self.second_turn)
         if cts == ts.ROLL_DICE:
 
             if action not in (a.ROLL_1, a.ROLL_2):
@@ -597,11 +621,11 @@ class MachiKoroEnv(gym.Env):
                 return self.state, 1000, True, {"end_turn" : False}
 
             d1, d2 = self.current_throw
-            if (d1 == d2 and HAS_SECOND_TURN) and not self.second_turn:
+            if (d1 == d2 and HAS_SECOND_TURN):
                 # only allow one second turn
                 self.current_turn_state = ts.ROLL_DICE
                 self.current_throw = (0,0)
-                self.second_turn = True
+                self.second_turn = 1
                 self.steal_card_target_action = None   
                 return self.state, self._reward(), False, {"end_turn" : False}
             else:

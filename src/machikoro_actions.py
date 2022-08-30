@@ -53,4 +53,4 @@ def to_state_index(action):
         int: The state space representation of a card.
     """    
     
-    return action - 1
+    return action
