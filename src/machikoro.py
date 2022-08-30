@@ -189,7 +189,7 @@ class MachiKoroEnv(gym.Env):
         Returns:
             tuple: (current state, reward (minus three), end game (false), {end_turn : false}))
         """        
-        return self.state, -3, False, {"end_turn" : False}
+        return self.state, -3, False, {}
 
     def _owns(self, card):
         """Whether the current player already owns the card
@@ -543,7 +543,6 @@ class MachiKoroEnv(gym.Env):
             tuple[np.ndarray, int, dict, bool]: state, reward, info, end of game
         """        
         
-        # result = (state, reward, end turn, end game)
         cts = self.current_turn_state
 
         # check monument ownership before turn
@@ -572,7 +571,7 @@ class MachiKoroEnv(gym.Env):
                 self.current_turn_state = ts.MAY_BUY
                 self._economy()
 
-            return self.state, self._reward(), False, {"end_turn" : False}
+            return self.state, self._reward(), False, {}
 
         elif cts == ts.MAY_REROLL:
 
@@ -590,7 +589,7 @@ class MachiKoroEnv(gym.Env):
             self._economy()
                 
 
-            return self.state, self._reward(), False, {"end_turn" : False}
+            return self.state, self._reward(), False, {}
 
         if cts == ts.MAY_CHOOSE_PLAYER_FOR_COINS:
             # only allow stealing from other players
@@ -606,7 +605,7 @@ class MachiKoroEnv(gym.Env):
             self.current_turn_state = ts.MAY_BUY
             self._economy()
             
-            return self.state, self._reward(), False, {"end_turn" : False}
+            return self.state, self._reward(), False, {}
 
         if cts == ts.MAY_CHOOSE_PLAYER_FOR_CARD:
             # only allow stealing from other players
@@ -619,7 +618,7 @@ class MachiKoroEnv(gym.Env):
 
             self.selected_player = action 
             self.current_turn_state = ts.MAY_CHOOSE_CARD
-            return self.state, self._reward(), False,{"end_turn" : False}
+            return self.state, self._reward(), False,{}
 
         if cts == ts.MAY_CHOOSE_CARD:
 
@@ -633,7 +632,7 @@ class MachiKoroEnv(gym.Env):
             # this should not do anything as the business center is the only card activated by throw=6,
             # but who knows what kind of add-ons will come :)
             self._economy()
-            return self.state, self._reward(), False, {"end_turn" : False}
+            return self.state, self._reward(), False, {}
 
         if cts == ts.MAY_BUY:
 
@@ -647,7 +646,7 @@ class MachiKoroEnv(gym.Env):
 
             # end game, player has all monuments, excluding index
             if sum(self.state[self.current_player, sp.STATION:sp.RADIO_TOWER + 1]) == 4:
-                return self.state, 1000, True, {"end_turn" : False}
+                return self.state, 1000, True, {}
 
             d1, d2 = self.current_throw
             if (d1 == d2 and HAS_SECOND_TURN):
@@ -656,14 +655,14 @@ class MachiKoroEnv(gym.Env):
                 self.current_throw = (0,0)
                 self.second_turn = 1
                 self.selected_player = 0   
-                return self.state, self._reward(), False, {"end_turn" : False}
+                return self.state, self._reward(), False, {}
             else:
                 # end turn
                 self._end_turn()
          
-                return self.state, self._reward(), False, {"end_turn" : True}
+                return self.state, self._reward(), False, {}
                 
-        return self.state, 0, False, {"end_turn" : True}
+        return self.state, 0, False, {}
 
     def render(self):
         """Prints out some information about the current state.
