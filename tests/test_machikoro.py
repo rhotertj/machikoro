@@ -210,6 +210,9 @@ def test_step():
 
 def test_player_not_first():
     env = MachiKoroEnv(n_players=4, player_index=3)
-
+    # player 0 starts
+    assert env.current_player == 0
+    # step simulates all players, then we roll
     env.step(a.ROLL_1) 
+    assert env.current_turn_state == ts.MAY_BUY
     assert env.current_player == 3

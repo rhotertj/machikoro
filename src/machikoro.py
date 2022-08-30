@@ -46,6 +46,7 @@ class MachiKoroEnv(gym.Env):
             1 "Turn state" - ROLL, REROLL or BUY
             1 Coins - Current funds
             1 2nd turn - Whether this is your second turn
+            1 selected player - Which player is selected to steal from
             4 Monuments
             15 Companies
             2 Dice
@@ -549,7 +550,7 @@ class MachiKoroEnv(gym.Env):
         HAS_REROLL = self._owns(sp.RADIO_TOWER)
         HAS_SECOND_TURN = self._owns(sp.AMUSEMENT_PARK) and not self.second_turn == 1
         HAS_2_DICE = self._owns(sp.STATION)
-        print("second turn: ",self.second_turn)
+
         if cts == ts.ROLL_DICE:
 
             if action not in (a.ROLL_1, a.ROLL_2):
