@@ -147,18 +147,38 @@ class MachiKoroEnv(gym.Env):
 
     @property
     def second_turn(self):
+        """Get the information whether this is the current players second turn.
+
+        Returns:
+            int: Whether this is your second turn (1) or not (0)
+        """        
         return self.state[self.current_player, sp.SECOND_TURN]
 
     @second_turn.setter
     def second_turn(self, new):
+        """Set the info whether next turn is your second.
+
+        Args:
+            new (int): Second turn boolean.
+        """        
         self.state[self.current_player, sp.SECOND_TURN] = new
 
     @property
     def selected_player(self):
+        """Returns which player was selected to steal a card from.
+
+        Returns:
+            int: Respective action for selected player.
+        """        
         return self.state[self.current_player, sp.PLAYER_SELECTED]
 
     @selected_player.setter
     def selected_player(self, new):
+        """Sets the selected player to steal a card from.
+
+        Args:
+            new (int): Action that selects a player.
+        """        
         self.state[self.current_player, sp.PLAYER_SELECTED] = new
 
 
